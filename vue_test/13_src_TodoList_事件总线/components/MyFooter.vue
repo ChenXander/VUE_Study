@@ -24,8 +24,8 @@ export default {
     doneTotal() {
       //此处使用reduce方法做条件统计
       /* const x = this.todos.reduce((pre,current)=>{
-					console.log('@',pre,current)
-					return pre + (current.done ? 1 : 0)
+					console.log('@',pre,current);
+					return pre + (current.done ? 1 : 0);
 				},0) */
       //简写
       return this.todos.reduce((pre, todo) => pre + (todo.done ? 1 : 0), 0);
