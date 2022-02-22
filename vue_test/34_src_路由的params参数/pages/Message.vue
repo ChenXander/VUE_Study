@@ -6,7 +6,7 @@
         <!-- <router-link :to="`/home/message/detail/${m.id}/${m.title}`">{{m.title}}</router-link>&nbsp;&nbsp; -->
 
         <!-- 跳转路由并携带params参数，to的对象写法 -->
-        <!-- <router-link
+        <router-link
           :to="{
               // params不能使用name，只能用path
             name: 'xiangqing',
@@ -17,7 +17,7 @@
           }"
         >
           {{ m.title }}
-        </router-link> -->
+        </router-link>
       </li>
     </ul>
     <hr />
