@@ -20,7 +20,12 @@
           >
         </li>
       </ul>
-      <keep-alive include="News"> // 组件名
+      <!-- 缓存多个路由组件 -->
+      <!-- <keep-alive :include="['News','Message']"> -->
+
+      <!-- 缓存一个路由组件 -->
+      <keep-alive include="News">
+        // 组件名
         <router-view></router-view>
       </keep-alive>
     </div>
