@@ -767,3 +767,49 @@ components: {
 ------
 
 ## `Vuex`<a name="vuex"></a>
+
+### 1.认识`Vuex`
+
+- 定义：`Vuex` 是一个专为 `Vue.js` 应用程序开发的状态管理模式
+  - 它采用集中式存储管理应用的所有组件的状态，并以相应的规则保证状态以一种可预测的方式发生变化
+  - `Vuex`也集成到`Vue`的官方调试工具`devtools extension`，提供了诸如零配置的`time-travel`调试、状态快照导入导出等高级调试功能
+
+### 2.`Vuex`的基本使用
+
+```vue
+1.创建
+/src/store/index.js
+import Vuex from 'vuex'
+import Vue from 'vue'
+
+Vue.use.(Vuex)
+
+const store = new Vuex.Store({
+	state: {},
+	mutations: {}, // 执行同步
+	actions: {}, // 相当于用于执行异步的mutations
+	getters; {}, // 相当于"全局的"计算属性computed
+	module: {} // 用于将store进行模块化管理
+})
+
+2.注册
+/src/main.js
+import Vue from 'vue'
+import App from './App'
+import store from './store'
+
+new Vue({
+	el: '#app',
+	store,
+	render: h => h(App)
+})
+
+3.使用
+在vue组件中通过
+this.$store获取store对象
+this.$store.state获取state对象
+this.$store.commit来修改状态(提交给mutations)
+this.$store.dispatch来修改状态(提交给actions)
+
+```
+
