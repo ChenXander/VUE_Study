@@ -813,3 +813,217 @@ this.$store.dispatch来修改状态(提交给actions)
 
 ```
 
+### 3.`State`单一状态树
+
+- 用一个对象就包含了全部的应用层级状态
+- 单一状态树能够让我们最直接的方式找到某个状态的片段，而且在之后的维护和调试过程中，也可以非常方便的管理和维护
+
+### 4.`Getters`
+
+- `Vuex` 允许我们在 `store` 中定义“getter”（可以认为是 `store` 的计算属性）。就像计算属性一样，`getter` 的返回值会根据它的依赖被缓存起来，且只有当它的依赖值发生了改变才会被重新计算
+
+### 5.`Mutations`
+
+- 更改`Vuex`的`store`中的状态的唯一方法是提交`mutation`
+
+1. `Mutation`主要包括两部分
+
+   - 字符串的事件类型(type)
+   - 一个回调函数(handler),该回调函数的第一个参数就是`state`
+
+2. `Mutation`传递参数
+
+   - 在通过`mutation`更新数据的时候, 有可能我们希望携带一些额外的参数
+   - 参数被称为是`mutation`的载荷(Payload)
+
+3. `Mutation`响应规则
+
+   - `Vuex`的`store`中的`state`是响应式的, 当`state`中的数据发生改变时, `Vue`组件会自动更新
+
+   - 这就要求我们必须遵守一些`Vuex`对应的规则
+
+     ```vue
+     1.提前在store中初始化好所需的属性
+     2.当给state中的对象添加新属性时, 使用下面的方式
+     	方式一: 使用Vue.set(obj, 'newProp', 123)
+     	方式二: 用新对象给旧对象重新赋值(利用展开运算符)
+     				state.obj = { ...state.obj, newProp: 123 }
+     ```
+
+4. `Mutation`常量类型
+
+   - 使用常量替代`mutation`事件类型在各种`Flux`实现中是很常见的模式。这样可以使`linter`之类的工具发挥作用，同时把这些常量放在单独的文件中可以让你的代码合作者对整个`app`包含的`mutation`一目了然
+
+   - ```js
+     1.创建存储常量的文件
+     // mutation-types.js
+     export const SOME_MUTATION = 'SOME_MUTATION'
+     
+     2.替换对应的计算属性
+     // store.js
+     import Vuex from 'vuex'
+     import { SOME_MUTATION } from './mutation-types'
+     
+     const store = new Vuex.Store({
+       state: { ... },
+       mutations: {
+         // 我们可以使用 ES2015 风格的计算属性命名功能来使用一个常量作为函数名
+         [SOME_MUTATION] (state) {
+           // mutate state
+         }
+       }
+     })
+     ```
+
+   - **一条重要的原则就是要记住`mutation`必须是同步函数**
+
+### 6.`Action`
+
+- `Action`类似于`mutation`，不同在于
+
+  - **`Action`提交的是`mutation`，而不是直接变更状态**
+  - **`Action`可以包含任意异步操作**
+
+- `Action`函数接受一个与`store`实例具有相同方法和属性的`context`对象，因此你可以调用`context.commit`提交一个`mutation`，或者通过`context.state`和 `context.getters`来获取`state`和`getters`
+
+- `Action`的分发
+
+  ```js
+  在Vue组件中, 如果我们调用action中的方法, 那么就需要使用dispatch
+  methods: {
+    addFn() {
+      this.$store.dispatch('addFn')
+    }
+  }
+  
+  同样的, 也是支持传递payload
+  methods: {
+    addFn() {
+      this.$store.dispatch('addFn', {count: 5})
+    }
+  }
+  
+  // vuex实例中
+  state: {
+    count: 0
+  }
+  mutations: {
+    addFn(state) {
+      state.count++
+    }
+  }
+  actions: {
+    addFn(context, payload) {
+      setTimeout(() => {
+        context.commit('addFn', payload)
+      }, 5000)
+    }
+  }
+  ```
+
+- `Action`返回的`Promise`
+
+  ```js
+  actions: {
+  	addFn(context) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          context.commit('addFn')
+          resolve()
+        }, 1000)
+      })
+    }
+  }
+  ```
+
+### 7.`Module`
+
+- 由于使用单一状态树，应用的所有状态会集中到一个比较大的对象。当应用变得非常复杂时，`store`对象就有可能变得相当臃肿
+
+- 为了解决这个问题，`Vuex`允许我们将`store`分割成模块(Module), 而每个模块拥有自己的`state`、`mutations`、`actions`、`getters`等
+
+  ```js
+  const moduleA = {
+    state: () => ({ ... }),
+    mutations: { ... },
+    actions: { ... },
+    getters: { ... }
+  }
+  
+  const moduleB = {
+    state: () => ({ ... }),
+    mutations: { ... },
+    actions: { ... }
+  }
+  
+  const store = new Vuex.Store({
+    modules: {
+      a: moduleA,
+      b: moduleB
+    }
+  })
+  
+  store.state.a // -> moduleA 的状态
+  store.state.b // -> moduleB 的状态
+  ```
+
+- 模块的局部状态
+
+  - 对于模块内部的 mutation 和 getter，接收的第一个参数是**模块的局部状态对象**
+
+  ```
+  const moduleA = {
+    state: () => ({
+      count: 0
+    }),
+    mutations: {
+      increment(state) {
+        // 这里的state对象是模块的局部状态
+        state.count++
+      }
+    },
+  
+    getters: {
+      doubleCount(state) {
+        return state.count * 2
+      }
+    }
+  }
+  // 注意：虽然increment，doubleCount都是在对象内部定义的，但是调用的时候是直接通过this.$store调用
+  ```
+
+- `actions`的写法
+
+  - 局部状态通过`context.state`暴露出来，根节点状态则为`context.rootState`
+
+- 如果`getters`中也需要使用全局的状态, 可以接受更多的参数
+
+  ```js
+  const moduleA = {
+    getters: {
+      rootCount(state, getters, rootState) {
+        return state.count + rootState.count
+      }
+    }
+  }
+  ```
+
+### 8.项目结构
+
+```sh
+├── index.html
+├── main.js
+├── api
+│   └── ... # 抽取出API请求
+├── components
+│   ├── App.vue
+│   └── ...
+└── store
+    ├── index.js          # 我们组装模块并导出 store 的地方
+    ├── actions.js        # 根级别的 action
+    ├── mutations.js      # 根级别的 mutation
+    └── modules
+        ├── cart.js       # 购物车模块
+        └── products.js   # 产品模块
+```
+
