@@ -397,6 +397,61 @@
 
      到这个数字，那么缓存组件中最近没有被访问的实例会被销毁
 
+### 4.新的组件
+
+1. `Fragment`
+
+   - 在`Vue2`中：组件必须有一个根标签
+   - 在`Vue3`中：组件可以没有根标签, 内部会将多个标签包含在一个`Fragment`虚拟元素中
+   - **好处：减少标签层级, 减小内存占用**
+
+2. `Teleport`
+
+   - `Teleport` 是一种能够将我们的组件`html`结构移动到指定位置的技术
+
+     ```vue
+     <!-- 有遮罩层的弹窗，移动到body，不影响原来的父元素 -->
+     <teleport to="移动位置：body">
+       <div v-if="isShow" class="mask">
+         <div class="dialog">
+           <h3>我是一个弹窗</h3>
+           <button @click="isShow = false">关闭弹窗</button>
+         </div>
+       </div>
+     </teleport>
+     ```
+
+3. `Suspense`
+
+   - 等待异步组件时渲染一些额外内容，让应用有更好的用户体验
+
+   - 使用步骤
+
+     ```js
+     // 异步引入组件
+     import {defineAsyncComponent} from 'vue'
+     const Child = defineAsyncComponent(()=>import('./components/Child.vue'))
+     ```
+
+     ```vue
+     <!-- 使用Suspense包裹组件，并配置好default与fallback -->
+     <template>
+     	<div class="app">
+     		<h3>我是App组件</h3>
+     		<Suspense>
+     			<template v-slot:default>
+     				<Child/>
+     			</template>
+     			<template v-slot:fallback>
+     				<h3>加载中.....</h3>
+     			</template>
+     		</Suspense>
+     	</div>
+     </template>
+     ```
+
+     
+
 ## 三.`Composition API`
 
 1. `setup`
@@ -558,7 +613,114 @@
    - 应用:   **要将响应式对象中的某个属性单独提供给外部使用时**
    - 扩展：```toRefs``` 与```toRef```功能一致，但可以批量创建多个`ref`对象，语法：`toRefs(person)`
 
-## 四.`Vue3.0`中的响应式原理
+## 四.其他`Composition API`
+
+1. `shallowReactive` 与 `shallowRef`
+
+   - `shallowReactive`：**只处理对象最外层属性的响应式**（浅响应式）
+   - `shallowRef`：**只处理基本数据类型的响应式**, 不进行对象的响应式处理
+   - 什么时候使用
+     - 如果有一个对象数据，结构比较深, 但变化时只是外层属性变化： `shallowReactive`
+     - 如果有一个对象数据，后续功能不会修改该对象中的属性，而是生成新的对象来替换：`shallowRef`
+
+2. `readonly` 与 `shallowReadonly`
+
+   - `readonly`：让一个响应式数据变为只读的（深只读）
+   - `shallowReadonly`：让一个响应式数据变为只读的（浅只读）
+   - 应用场景: 不希望数据被修改时
+
+3. `toRaw` 与 `markRaw`
+
+   - `toRaw`
+     - 作用：将一个由```reactive```生成的**响应式对象**转为**普通对象**
+     - 使用场景：用于读取响应式对象对应的普通对象，对这个普通对象的所有操作，不会引起页面更新
+   - `markRaw`
+     - 作用：标记一个对象，使其永远不会再成为响应式对象
+     - 应用场景：
+       1. 有些值不应被设置为响应式的，例如复杂的第三方类库等
+       2. 当渲染具有不可变数据源的大列表时，**跳过响应式转换可以提高性能**
+
+4. `customRef`
+
+   - 作用：创建一个自定义的`ref`，并对其依赖项跟踪和更新触发进行显式控制
+
+   - 实现防抖效果
+
+     ```vue
+     <template>
+     	<input type="text" v-model="keyword">
+     	<h3>{{keyword}}</h3>
+     </template>
+     
+     <script>
+     	import {ref,customRef} from 'vue'
+     	export default {
+     		name:'Demo',
+     		setup(){
+     			// let keyword = ref('hello') //使用Vue准备好的内置ref
+     			//自定义一个myRef
+     			function myRef(value,delay){
+     				let timer
+     				//通过customRef去实现自定义
+     				return customRef((track,trigger)=>{
+     					return{
+     						get(){
+     							track() //告诉Vue这个value值是需要被“追踪”的
+     							return value
+     						},
+     						set(newValue){
+     							clearTimeout(timer)
+     							timer = setTimeout(()=>{
+     								value = newValue
+     								trigger() //告诉Vue去更新界面
+     							},delay)
+     						}
+     					}
+     				})
+     			}
+     			let keyword = myRef('hello',500) //使用程序员自定义的ref
+     			return {
+     				keyword
+     			}
+     		}
+     	}
+     </script>
+     ```
+
+5. `provide` 与 `inject`
+
+   - 作用：实现祖与后代组件间通信
+
+   - 父组件有一个 `provide` 选项来提供数据，后代组件有一个 `inject` 选项来开始使用这些数据
+
+   - 具体写法：
+
+     ```js
+     // 祖组件
+     setup(){
+       ......
+       let person = reactive({name:'张三',age:18})
+       provide('person',person)
+       ......
+     }
+       
+     // 后代组件
+     setup(props,context){
+       ......
+       const person = inject('person')
+       return {person}
+       ......
+     }
+     ```
+
+6. 响应式数据的判断
+
+   - `isRef`：检查一个值是否为一个`ref`对象
+   - `isReactive`：检查一个对象是否是由`reactive`创建的响应式代理
+   - `isReadonly`：检查一个对象是否是由`readonly`创建的只读代理
+   - `isProxy`：检查一个对象是否是由`reactive`或者`readonly`方法创建的代理
+
+## 五.`Vue3.0`中的响应式原理
 
 1. `vue2.x`的响应式
 
@@ -607,5 +769,62 @@
        proxy.name = 'tom'   
        ```
 
-## 五.生命周期
+## 六.生命周期
 
+1. `Vue3.0`中可以继续使用`Vue2.x`中的生命周期钩子，但有两个被更名
+   - `beforeDestroy`改名为`beforeUnmount`
+   - `destroyed`改名为`unmounted`
+2. `Vue3.0`也提供了`Composition API`形式的生命周期钩子，与`Vue2.x`中钩子对应关系如下
+   - `beforeCreate` ===> `setup()`
+   - `created`           ===> `setup()`
+   - `beforeMount`   ===> `onBeforeMount`
+   - `mounted`           ===> `onMounted`
+   - `beforeUpdate` ===> `onBeforeUpdate`
+   - `updated`           ===> `onUpdated`
+   - `beforeUnmount` ===> `onBeforeUnmount`
+   - `unmounted`         ===> `onUnmounted`
+3. 如果两种钩子同时存在，`vue3.0`的`Composition API`会优先执行
+
+## 七.`Composition API`的优势
+
+1. `Options API`存在的问题
+   - 使用传统`OptionsAPI`中，新增或者修改一个需求，就需要分别在`data`，`methods`，`computed`里修改
+2. `Composition API` 的优势
+   - 我们可以更加优雅的组织我们的代码，函数。让相关功能的代码更加有序的组织在一起
+
+## 八.全局`API`的转移
+
+1. `Vue 2.x`有许多全局`API`和配置
+
+   - 例如：注册全局组件、注册全局指令等
+
+     ```js
+     //注册全局组件
+     Vue.component('MyButton', {
+       data: () => ({
+         count: 0
+       }),
+       template: '<button @click="count++">Clicked {{ count }} times.</button>'
+     })
+     
+     //注册全局指令
+     Vue.directive('focus', {
+       inserted: el => el.focus()
+     }
+     ```
+
+2. `Vue3.0`中对这些`API`做出了调整
+
+   - 将全局的`API`，即：`Vue.xxx`调整到应用实例（`app`）上
+
+     | `2.x` 全局 `API`（`Vue`） | `3.x` 实例 `API` (`app`)      |
+     | ------------------------- | ----------------------------- |
+     | `Vue.config.xxxx`         | `app.config.xxxx`             |
+     | Vue.config.productionTip  | **移除**                      |
+     | `Vue.component`           | `app.component`               |
+     | `Vue.directive`           | `app.directive`               |
+     | `Vue.mixin`               | `app.mixin`                   |
+     | `Vue.use`                 | `app.use`                     |
+     | `Vue.prototype`           | `app.config.globalProperties` |
+
+     
