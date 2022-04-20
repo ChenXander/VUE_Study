@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <script>
+      // let data = {
+      //   name: '张三'
+      // }
+      let data = {}
+      let _name = '张三'
+      Object.defineProperty(data, 'name', {
+        get() {
+          console.log('你访问了data1的name属性')
+          return _name
+        },
+
+        set(newValue) {
+          console.log('你修改了data1的name属性最新的值为', newValue)
+          _name = newValue
+        }
+      })
+      // 问题产生的原因：get中直接返回了一个固定的值,并且set函数中新值拿到了但是没有做任何事情
+      // 解决方案：通过声明一个中间变量,让get函数中return出去这个变量
+      // 并且在set函数中把最新的值设置到这个中间变量身上,起到一个set和get操作的一个
+      // 数据的效果
+    </script>
+  </body>
+</html>

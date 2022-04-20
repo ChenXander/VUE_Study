@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Object.defineProperty</title>
+  </head>
+
+  <body>
+    <script>
+      // 1. 字面量定义
+      let data = {
+        name: '张三'
+      }
+      data.name = '李四' // 这种情况下我们并不能知道name属性发生了变化
+
+      // 2. Object.defineProperty
+      let data1 = {}
+      Object.defineProperty(data1, 'name', {
+        // 当我们访问data1的name属性的时候自动调用的方法
+        // 并且get函数的返回值就是你拿到的值
+        get() {
+          console.log('你访问了data1的name属性')
+          return '张三'
+        },
+        // 当我们设置修改name属性的时候自动调用的函数
+        // 并且属性最新的值会被当成实参传入进来
+        set(newValue) {
+          console.log('你修改了data1的name属性最新的值为', newValue)
+          // 这个位置 只要你修改了name属性就会得到执行
+          // 所以如果你想要在name变化的时候 完成一些自己的事情
+          // 都可以放到这里来执行
+          // 1. ajax()
+          // 2. 操作一块dom区域
+        }
+      })
+      // 以上是js中对象定义的另外一种方案，可以在访问属性和设置属性的时候自动调用对应的函数
+      // 访问属性：data.name  data['name']
+      // 设置属性：data.name = '王五'  data['name'] = '王五'
+    </script>
+  </body>
+</html>
