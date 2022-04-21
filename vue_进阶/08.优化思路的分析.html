@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <!--
+    发布订阅  （自定义事件）
+   -->
+    <!--
+     优化思路：
+     1. 数据变化之后 实际上执行哪部分代码就可以了
+        node.innerText = data[nodeValue]
+
+     2. 要完成以上代码 我们需要关注俩个主体
+        node: 当前要操作哪个dom元素
+        nodeValue: 我们要去data中查找的对象属性名是谁 'name' 'age'
+
+     3. 正常逻辑下 函数的执行之后 内部所有的变量都会被销毁
+        为了保证我们来个关键信息 node 和 nodeValue属性名 不被销毁
+        我们需要引入闭包机制  强制让他们常驻内存
+        解惑：之所以不能被销毁，是因为应用跑起来之后，我们一直在操作数据 一直在操作数据对应的dom
+        () => {
+          node.innerText = data[nodeValue]
+        }
+        这样做可以借助函数引用外层函数的node变量和nodeValue变量从而使它们一直在内存不被销毁
+        所以我们才可以一直对他们进行操作
+
+     4. 由于我们响应式数据绑定到的dom节点可能有多个，所以node节点可能存在多个
+        一旦响应式属性（name）发生变化 与name属性相关的所有的dom节点都需要进行
+        一轮更新，所以属性和更新函数之间是一个一对多的关系
+        {
+          nodeValue: [
+            () => {node1.innerText = data[nodeValue]}, p标签1
+            () => {node2.innerText = data[nodeValue]}, p标签2
+            ....
+          ]
+        }
+    -->
+  </body>
+</html>
