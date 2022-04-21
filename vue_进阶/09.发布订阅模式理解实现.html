@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <!--
+    发布订阅模式（自定义事件）
+   -->
+    <button id="btn">click me!</button>
+    <script>
+      const btnDom = document.getElementById('btn')
+      // btnDom.onclick = function () {
+      //   console.log('btn被点击了')
+      // }
+      // btnDom.onclick = function(){
+      //   console.log('今天可好难')
+      // }
+      // 以上实现 并不能完成俩个回调函数都打印的结果
+      // 它是一个一对一的实现 一个事件 -> 回调函数
+
+      // 优化 从一对一  一对多
+      btn.addEventListener('click', () => {
+        console.log('我被点击了')
+      })
+      btn.addEventListener('click', () => {
+        console.log('我又被点击了')
+      })
+      // 这种模式下 可以实现 同一个事件对应多个回调函数 实现了关键的`一对多`
+      // 事实上这种优化 使用的就是发布订阅模式
+
+      /*
+      浏览器的实现过程分析：
+      1. 浏览器实现了一个方法 叫做addEventListener
+      2. 这个方法接受俩个参数 参数1代表 事件类型  参数2代表回调函数
+      3. 为了实现一对多架构
+      {
+        click: ['回调函数1','回调函数2',....]
+      }
+      4. 当鼠标点击的时候,通过事件类型click去数据结构中找到存放了所有相关回调函数的数组
+      然后遍历,都执行一遍,从而实现一对多
+    */
+
+      /*
+      实现一个自己的自定义事件收集和触发架构
+      1. 定义一个方法 接受俩个参数 参数1为事件名称 参数2为回调函数
+         只要方法一执行 就收集回调函数到对应的位置上去
+
+    */
+      /**
+       * @description: 收集事件回调函数
+       * @param {*} eventName  事件名称
+       * @param {*} fn  回调函数
+       * @return {*}
+       */
+      const map = {}
+      function collect(eventName, fn) {
+        // 如果当前map中已经初始化好了 click:[]
+        // 就直接往里面push  如果没有初始化首次添加  就先进行初始化
+        if (!map[eventName]) {
+          map[eventName] = []
+        }
+        map[eventName].push(fn)
+      }
+
+      collect('cp', () => {
+        console.log('收集成功了cp')
+      })
+      collect('cp', () => {
+        console.log('再一次收集成功了cp')
+      })
+      console.log(map)
+
+      // 以上完成了事件的收集操作  实现了一对多的存储架构
+
+      // 模拟鼠标点击  主动通过程序去触发收集起来的事件
+      // 需要通过事件名称 找到对应的回调函数数组 然后遍历执行即可
+      /**
+       * @description: 触发自定义事件执行
+       * @param {*} eventName 事件名称
+       * @return {*}
+       */
+      function trigger(eventName) {
+        map[eventName].forEach((fn) => fn())
+      }
+
+      trigger('cp')
+
+      // 做一点优化  把所有和事件相关的数据结构 以及方法收敛到一个对象中
+      const Dep = {
+        map: {},
+        // 收集事件的方法
+        collect(eventName, fn) {
+          // 如果当前map中已经初始化好了 click:[]
+          // 就直接往里面push  如果没有初始化首次添加  就先进行初始化
+          if (!this.map[eventName]) {
+            this.map[eventName] = []
+          }
+          this.map[eventName].push(fn)
+        },
+        // 触发事件的方法
+        trigger(eventName) {
+          this.map[eventName].forEach((fn) => fn())
+        }
+      }
+
+      Dep.collect('han', () => {
+        console.log('张三今天在')
+      })
+      Dep.collect('duan', () => {
+        console.log('李四今天在')
+      })
+      console.log(Dep)
+      Dep.trigger('han')
+    </script>
+  </body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <div id="app">
+      <p v-text="name"></p>
+      <p v-text="name"></p>
+      <span v-text="age"></span>
+      <input type="text" v-model="age" />
+    </div>
+
+    <script>
+      // 引入发布订阅模式
+      const Dep = {
+        map: {},
+        // 收集事件的方法
+        collect(eventName, fn) {
+          // 如果当前map中已经初始化好了 click:[]
+          // 就直接往里面push  如果没有初始化首次添加  就先进行初始化
+          if (!this.map[eventName]) {
+            this.map[eventName] = []
+          }
+          this.map[eventName].push(fn)
+        },
+        // 触发事件的方法
+        trigger(eventName) {
+          this.map[eventName].forEach((fn) => fn())
+        }
+      }
+
+      let data = {
+        name: '柴柴老师',
+        age: 29
+      }
+      // 把data中的属性变成响应式的
+      Object.keys(data).forEach((key) => {
+        defineReactive(data, key, data[key])
+      })
+      function defineReactive(data, key, value) {
+        // 进行转换操作
+        Object.defineProperty(data, key, {
+          get() {
+            return value
+          },
+          set(newValue) {
+            // set函数的执行 不会自动判断俩次修改的值是否相等
+            // 显然如果相等 不应该执行变化的逻辑
+            if (newValue === value) {
+              return
+            }
+            value = newValue
+            // 这里我们把最新的值 反映到视图中  这里是关键的位置
+            // 核心：操作dom  就是通过操作dom api 把最新的值设置上去
+            // 在这里进行精准更新 -> 通过data中的属性名找到对应的更新函数依次执行
+            Dep.trigger(key)
+          }
+        })
+      }
+      // 1.通过标识查找把数据放到对应的dom上显示出来
+      function compile() {
+        let app = document.getElementById('app')
+        // 拿到所有节点
+        const childNodes = app.childNodes // 所有类型的节点包括文本节点和标签节点
+        childNodes.forEach((node) => {
+          if (node.nodeType === 1) {
+            const attrs = node.attributes
+            Array.from(attrs).forEach((attr) => {
+              const nodeName = attr.nodeName
+              const nodeValue = attr.nodeValue
+              // 实现v-text
+              if (nodeName === 'v-text') {
+                node.innerText = data[nodeValue]
+                // 收集更新函数
+                Dep.collect(nodeValue, () => {
+                  console.log(`当前您修改了属性${nodeValue}`)
+                  node.innerText = data[nodeValue]
+                })
+              }
+              // 实现v-model
+              if (nodeName === 'v-model') {
+                // 调用dom操作给input标签绑定数据
+                node.value = data[nodeValue]
+                // 收集更新函数
+                Dep.collect(nodeValue, () => {
+                  node.value = data[nodeValue]
+                })
+                // 监听input事件 在事件回调中 拿到最新的输入值 赋值给绑定的属性
+                node.addEventListener('input', (e) => {
+                  let newValue = e.target.value
+                  // 反向赋值
+                  data[nodeValue] = newValue
+                })
+              }
+            })
+          }
+        })
+      }
+      compile()
+      console.log(Dep)
+    </script>
+    <!--
+    存在的问题：更新太过粗暴
+    不管你修改了哪个属性,其它属性也会一起跟着进行更新 哪怕你根本就没有动他
+    只修改了name的时候 正常逻辑  应该只有name相关的更新操作才进行 而不是粗暴的吧所有的都更新一遍
+
+    期望：
+      哪个属性进行了实质性的修改 哪个属性对应的‘编译’部分才得到执行，这个更新优化
+      我们称之为‘精准更新’
+
+    发布订阅优化的思路
+    1. 针对每一个响应式属性 收集与之相关的更新函数
+    2. 响应式属性更新之后 通过属性名称找到与之绑定在一起的所有更新函数进行处罚执行
+
+  --></body>
+</html>

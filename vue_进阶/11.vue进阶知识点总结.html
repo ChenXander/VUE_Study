@@ -1,0 +1,143 @@
+<!--
+  1. Object.defineProperty
+     ES6提供的原生方法
+     Object.defineProperty(data, 'name', {
+       // 访问data.name属性的时候会自动调用 并且get函数的返回值就是你通过data.name拿到的值
+       get(){
+        return '张三'
+       },
+       // 设置一个对象属性的时候自动调用的函数  会把设置的最新的值当成实参传入set函数
+       // data.name = 'hahaha'
+       set(newValue){
+         // 在这个位置 只要数据发生变化 我们可以做我们想做的任何事情
+         // ajax  console.log  操作dom  ....
+       }
+     })
+
+     响应式的核心API
+
+  2. 数据反应到视图
+     数据的变化可以引起视图的变化(通过操作dom把数据放到对应的位置上去 如果数据变化之后就用数据最新的值再重新放一次)
+
+     方案一:命令式操作
+      1. document.querySelector('#app p').innerText = data.name
+      2. set函数中重新执行一下document.querySelector('#app p').innerText = data.name
+
+     方案二:声明式渲染
+      v-text指令的实现
+      <p v-text="name"></p>
+      核心逻辑：通过‘模板编译’找到标记了v-text的元素,然后把对应的数据通过操作domapi放上去
+      <div id="app">
+        <p v-text="name"></p>
+        <p></p>
+      </app>
+      1.通过app根元素找到所有的子节点 （元素节点，文本节点...） -> dom.nodeChilds
+      2.通过节点类型筛选出元素节点  （p）  -> nodeType  1元素节点  3文本节点
+      3.通过v-text找到需要设置的具体的节点  <p v-text></p>
+      4.找到绑定了v-text标记的元素 拿到它身上所有的属性   id class v-text="name"
+      5.通过v-text="name" 拿到指令类型 ‘v-text’ 拿到需要绑定的数据的属性名 ‘name’
+      6.判断当前是v-text指令  然后通过操作domapi 把name属性对应的值放上去  node.innerText = data[name]
+      以上整个过程可以称作‘模板编译’
+
+  3. 视图的变化反映到数据
+    input元素 v-model双向绑定
+    M -> V
+    V -> M
+    1. M -> V
+      1.通过app根元素找到所有的子节点 （元素节点，文本节点...） -> dom.nodeChilds
+      2.通过节点类型筛选出元素节点  （p）  -> nodeType  1元素节点  3文本节点
+      3.通过v-text找到需要设置的具体的节点  <p v-text></p>
+      4.找到绑定了v-text标记的元素 拿到它身上所有的属性   id class v-text="name"
+      5.通过v-model="name" 拿到指令类型 ‘v-model’ 拿到需要绑定的数据的属性名 ‘name’
+      6.判断当前是v-model指令  然后通过操作domapi 把name属性对应的值放上去  node.value = data[name]
+      v-model和v-text除了指令类型不一致，使用的dom api不一致 其它的步骤是完全一致的
+
+    2. V -> M
+      本质：事件监听在回调函数中拿到input中输入的最新的值然后赋值给绑定的属性
+      node.addEventListener('input',(e)=>{
+        data[name] = e.target.value
+      })
+
+    以上总结：
+     1.数据的响应式
+     2.数据变化影响视图
+     3.视图变化影响数据
+     4.指令是如何实现的(常规实现逻辑)
+
+   优化工作：
+    1. 通用的数据响应式处理
+    data(){
+      return {
+        name:'cp',
+        age:28
+      }
+    }
+    基于现成的数据,然后都处理成响应式
+    Object.keys(data) // 由所有的对象的key组成的数组
+    Object.keys(data).forEach(key=>{
+      // key 属性名
+      // data[key]  属性值
+      // data 原对象
+      // 将所有的key都转成get和set的形式
+      defineReactive(data,key,data[key])
+    })
+    function defineReactive(data,key,value){
+      Oject.defineProperty(data, key, {
+        get(){
+          return value
+        },
+        set(newValue){
+          value = newValue
+        }
+      })
+    }
+    2. 发布订阅模式
+    问题：
+    <div>
+      <p v-text="name"></p>
+      <p v-text="name"></p>
+      <div  v-text="age"></div>
+    </div>
+    name发生变化之后 我需要做的事情是更新俩个p标签,而现在不管你更新了哪个数据,所有的标签都会被重新
+    操作赋值,无法做到精准更新
+
+    解决问题的思路：
+    1. 数据发生变化之后最关键的代码是什么？
+      node.innerText = data[name]
+
+    2. 设计一个存储结构
+      每一个响应式数据可能被多个标签绑定 是一个‘一对多’的关系
+      {
+        name: [()=>{ node(p1).innerText = data[name]},()=>{ node(p2).innerText = data[name]}...]
+      }
+
+    发布订阅（自定义事件） 解决的问题就是 ‘1对多’的问题
+
+    实现简单的发布订阅模式：
+    浏览器的事件模型
+    dom.addEventLister('click',()=>{})
+    只要调用click事件，所有绑定的回调函数都会执行 显然是一个1对多的关系
+
+    const Dep = {
+      map:{},
+      collect(eventName,fn){
+        // 如果从来没有收集过当前事件就先初始化成数组
+        if(!this.map[eventName]){
+          this.map[eventName] = []
+        }
+        // 已经初始化好了就直接往里面push添加
+        this.map[eventName].push(fn)
+      },
+      trigger(eventName){
+        this.map[eventName].forEach(fn=>fn())
+      }
+    }
+
+    使用发布订阅模式优化现存问题
+     先前的写法 不管是哪个数据发生变化我们都是粗暴的执行一下compile函数即可
+
+     现在的写法  我们在compile函数初次执行的时候 完成更新函数的收集 然后在数据变化的时候
+     通过数据的key找到相对应的更新函数 依次执行 达到精准更新的效果
+
+
+ -->
