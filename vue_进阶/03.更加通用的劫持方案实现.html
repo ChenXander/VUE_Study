@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <body>
+    <script>
+      // 开发vue项目的时候，都是提前把响应式数据都放到了data配置中
+      /*
+      data(){
+        return {
+          name:'cp',
+          height: 180
+        }
+      }
+    */
+      // 所以一般情况下，响应式数据提前写好，并且对象的属性很多，不止一个
+      let data = {
+        name: 'cp',
+        height: 180,
+        age: 29
+      }
+      // 如何把这个提前申明好的对象,把里面的所有的属性都变成我们刚才讲过的 set和get的形式？
+      // 可以做到不管是访问data中的任何一个属性还是设置data中的任何一个属性我们都能知道
+      // 1. 由于有多个属性 对象的遍历
+      Object.keys(data).forEach((key) => {
+        console.log(key, data[key])
+        // key代表data对象的每一个属性名
+        // data[key]代表data对象每一个属性对应的value值
+        // data 源对象
+        // 处理每一个对象key转变成响应式
+        defineReactive(data, key, data[key])
+      })
+      // 2. 把对象的属性转成get和set的形式
+      /**
+       * @description: 把对象的属性转成get和set的形式
+       * @param {*} data  要处理的对象
+       * @param {*} key  要处理的对象属性名
+       * @param {*} value  要处理的对象属性名对应的初始值
+       * @return {*}
+       */
+
+      // 1. 函数定义形参相当于在内部 申明了和形参名字对应的变量 并且初始值为undefined
+      // 2. 函数调用传入实参的时候 相当于给内部申明好的变量做了赋值操作 （首次遍历举例）
+      // 3. defineReactive函数调用完毕 本来应该内部所有的变量都会被回收 但是如果内部有其它函数使用了当前变量则形成了闭包 不会被回收
+      // 4. 内部由于有其它方法引用了value属性  所以defineReactive函数的执行并不会导致value变量的销毁 会一直常驻内存
+      // 5. 由于闭包的特性 每一个传入下来的value都会常驻内存  相当于我们上一节讲的中间变量_name 目的是为了set和get的联动
+      //
+      function defineReactive(data, key, value) {
+        // let data = data
+        // let key = 'name'
+        // let value = 'cp'
+        // 进行转换操作
+        Object.defineProperty(data, key, {
+          get() {
+            console.log('您访问了属性', key)
+            return value
+          },
+          set(newValue) {
+            console.log('您修改了属性', key)
+            value = newValue
+          }
+        })
+      }
+      // 总结：
+      // 1. 尽量不要在一个函数中书写大量的逻辑，而是应该按照功能拆分成多个小函数
+      //    然后再通过传参组合起来
+
+      // 2. 对象遍历的时候 每遍历一次 调用一次defineReactive函数  形成了多个独立的
+      //    函数作用域  在每一个独立的函数作用域中 set和get联动操作的都是独立的value值(闭包)
+      //    一块操作 name  一块操作height  一块操作age
+    </script>
+  </body>
+</html>
